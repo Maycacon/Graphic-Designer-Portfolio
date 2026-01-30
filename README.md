@@ -99,7 +99,3 @@ Atualize as informações de contato em `src/app/pages/contact-page.tsx`
 ## Suporte
 
 Para suporte, entre em contato através das informações na página de contato.
-
-## Licença
-
-Código original de https://www.figma.com/design/44ao9XOhJJkhYvBbSEpTP2/Graphic-Designer-Portfolio
