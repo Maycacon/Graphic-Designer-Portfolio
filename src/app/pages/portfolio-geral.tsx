@@ -3,9 +3,8 @@ import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 import { Play, ArrowLeft, FileVideo } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/app/components/ui/dialog";
-import {flyerProjects} from "./portfolio-flyers";
-import {ledsProjects} from "./portfolio-leds";
-import {videoProjects} from "./portfolio-videos";
+import { useAdminProjects } from "@/app/lib/useAdminProjects";
+import { flyerProjects as fallbackFlyers, ledsProjects as fallbackLeds, videoProjects as fallbackVideos } from "@/app/lib/fallback-projects";
 
 
 interface PortfolioGeralProps {
@@ -14,7 +13,9 @@ interface PortfolioGeralProps {
 
 
 export function PortfolioGeral({ onNavigate }: PortfolioGeralProps) {
+  const { projects } = useAdminProjects();
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const all = projects ?? [...fallbackFlyers, ...fallbackLeds, ...fallbackVideos];
   return (
     <div className="min-h-screen pt-20" style={{ backgroundColor: '#2d085e' }}>
       {/* Portfolio Sections */}
@@ -34,7 +35,7 @@ export function PortfolioGeral({ onNavigate }: PortfolioGeralProps) {
               </motion.button>
             </div>
             <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {flyerProjects.map((project, index) => (
+              {all.filter(p => p.category === 'Flyers').map((project, index) => (
                 <motion.div
                   key={project.id}
                   initial={{ opacity: 0, y: 40 }}
@@ -112,7 +113,7 @@ export function PortfolioGeral({ onNavigate }: PortfolioGeralProps) {
               </motion.button>
             </div>
             <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {ledsProjects.map((project, index) => (
+              {all.filter(p => p.category === 'Leds').map((project, index) => (
                 <motion.div
                   key={project.id}
                   initial={{ opacity: 0, y: 40 }}
@@ -190,7 +191,7 @@ export function PortfolioGeral({ onNavigate }: PortfolioGeralProps) {
               </motion.button>
             </div>
             <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {videoProjects.map((project, index) => (
+              {all.filter(p => p.category === 'Vídeos').map((project, index) => (
                 <motion.div
                   key={project.id}
                   initial={{ opacity: 0, y: 40 }}

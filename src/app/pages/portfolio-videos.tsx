@@ -5,61 +5,19 @@ import { Play, ArrowLeft, FileVideo } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/app/components/ui/dialog";
 
+import { useAdminProjects } from "@/app/lib/useAdminProjects";
+import { videoProjects as fallbackVideos } from "@/app/lib/fallback-projects";
+
 interface PortfolioVideosProps {
   onNavigate: (page: string) => void;
 }
 
-export const videoProjects = [
-  {
-    id: 1,
-    title: 'Motion Reel 2025',
-    category: 'Showreel',
-    description: 'Compilação dos melhores trabalhos do ano',
-    video: 'https://res.cloudinary.com/da13zwelb/video/upload/v1774042362/atlantisEmpire_v8rnbq.mp4',
-    image: 'https://images.unsplash.com/photo-1758553173287-513ad13280b6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aWRlbyUyMGVkaXRpbmclMjBjcmVhdGl2ZSUyMG1vZGVybnxlbnwxfHx8fDE3Njk1NTI4NzZ8MA&ixlib=rb-4.1.0&q=80&w=1080'
-  },
-  {
-    id: 2,
-    title: 'Brand Animation',
-    category: 'Motion Graphics',
-    description: 'Animação de logo e identidade visual',
-    video: 'https://res.cloudinary.com/da13zwelb/video/upload/v1774042362/atlantisEmpire_v8rnbq.mp4',
-    image: 'https://images.unsplash.com/photo-1764437180200-f0fd57fa15d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb3Rpb24lMjBncmFwaGljcyUyMGFic3RyYWN0JTIwZ2VvbWV0cmljfGVufDF8fHx8MTc2OTU1Mjg3N3ww&ixlib=rb-4.1.0&q=80&w=1080'
-  },
-  {
-    id: 3,
-    title: 'Social Media Content',
-    category: 'Reels & Stories',
-    description: 'Conteúdo dinâmico para redes sociais',
-    video: 'https://res.cloudinary.com/da13zwelb/video/upload/v1774042362/atlantisEmpire_v8rnbq.mp4',
-    image: 'https://images.unsplash.com/photo-1750056393300-102f7c4b8bc2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwZGVzaWduJTIwY3JlYXRpdmUlMjBtb2NrdXB8ZW58MXx8fHwxNzY5NTUyODc4fDA&ixlib=rb-4.1.0&q=80&w=1080'
-  },
-  {
-    id: 4,
-    title: 'Product Showcase',
-    category: 'Comercial',
-    description: 'Vídeo promocional de produto',
-    video: 'https://res.cloudinary.com/da13zwelb/video/upload/v1774042362/atlantisEmpire_v8rnbq.mp4',
-    image: 'https://images.unsplash.com/photo-1726556267498-2f7cbbc94bf5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmVhdGl2ZSUyMHBvcnRmb2xpbyUyMG1vZGVybiUyMGRlc2lnbnxlbnwxfHx8fDE3Njk1NTI4Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080'
-  },
-  {
-    id: 5,
-    title: 'Event Recap',
-    category: 'Cobertura',
-    description: 'Resumo visual de evento corporativo',
-    image: 'https://images.unsplash.com/photo-1763888450540-9b59abff803b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsZWQlMjBzY3JlZW4lMjBkaXNwbGF5JTIwZGlnaXRhbHxlbnwxfHx8fDE3Njk1NTQzODZ8MA&ixlib=rb-4.1.0&q=80&w=1080'
-  },
-  {
-    id: 6,
-    title: 'Music Video',
-    category: 'Artístico',
-    description: 'Clipe com direção de fotografia criativa',
-    image: 'https://images.unsplash.com/photo-1620983626305-88db754c9a29?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxuZW9uJTIwbGlnaHRzJTIwdXJiYW4lMjBuaWdodHxlbnwxfHx8fDE3Njk1NTQzODZ8MA&ixlib=rb-4.1.0&q=80&w=1080'
-  }
-];
-
-export function PortfolioVideos({ onNavigate }: PortfolioVideosProps, p0: number, title: any, p1: string, category: any, p2: string, description: any, p3: string, image: any, p4: string) {
-  const [selectedProject, setSelectedProject] = useState<typeof videoProjects[0] | null>(null);
+export function PortfolioVideos({ onNavigate }: PortfolioVideosProps) {
+  const { projects, loading } = useAdminProjects();
+  const [selectedProject, setSelectedProject] = useState<any | null>(null);
+  const displayed = projects
+    ? projects.filter((p: any) => p.category === 'Vídeos')
+    : fallbackVideos.map((p: any) => ({ ...p, category: 'Vídeos' }));
   return (
     <div className="min-h-screen pt-20" style={{ backgroundColor: '#2d085e' }}>
       {/* Hero */}
@@ -86,7 +44,7 @@ export function PortfolioVideos({ onNavigate }: PortfolioVideosProps, p0: number
       <section className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {videoProjects.map((project, index) => (
+            {displayed.map((project, index) => (
               <motion.div
                 key={project.id}
                 initial={{ opacity: 0, y: 30 }}

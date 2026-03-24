@@ -22,7 +22,7 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
     },
     { id: 'contact', label: 'Contato' },
     { id: 'about', label: 'Sobre' },
-    { id: 'admin', label: 'Admin' },
+
   ];
 
   const handleNavClick = (pageId: string) => {
