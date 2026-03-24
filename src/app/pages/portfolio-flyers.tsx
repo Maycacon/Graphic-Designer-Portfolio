@@ -1,26 +1,28 @@
 import { motion } from "motion/react";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 import { AnimatedShapes } from "@/app/components/animated-shapes";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileVideo } from "lucide-react";
+import { useState } from "react";
+import { Dialog, DialogContent } from "@/app/components/ui/dialog";
 
 interface PortfolioFlyersProps {
   onNavigate: (page: string) => void;
 }
 
-const flyerProjects = [
+export const flyerProjects = [
   {
     id: 1,
     title: 'Campanha Digital',
     category: 'Redes Sociais',
     description: 'Flyers para Instagram e Facebook',
-    image: 'https://images.unsplash.com/photo-1710799885122-428e63eff691?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmbHllciUyMGRlc2lnbiUyMG1vY2t1cCUyMHByb2Zlc3Npb25hbHxlbnwxfHx8fDE3Njk1NTI4Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080'
+    video: 'https://res.cloudinary.com/da13zwelb/video/upload/v1774042362/atlantisEmpire_v8rnbq.mp4',
   },
   {
     id: 2,
     title: 'Evento Musical',
     category: 'Entretenimento',
     description: 'Material promocional para show',
-    image: 'https://images.unsplash.com/photo-1726556267498-2f7cbbc94bf5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmVhdGl2ZSUyMHBvcnRmb2xpbyUyMG1vZGVybiUyMGRlc2lnbnxlbnwxfHx8fDE3Njk1NTI4Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080'
+    image: 'https://images.unsplash.com/photo-1726556267498-2f7cbbc94bf5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmVhdGl2ZSUyMHBvcnRmb2xpbyUyMG1vZGVybiUyMGRlc2lnbnxlbnwxfHx8fDE3Njk1NTI4Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080',
   },
   {
     id: 3,
@@ -53,20 +55,13 @@ const flyerProjects = [
 ];
 
 export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps, p0: number, title: any, p1: string, category: any, p2: string, description: any, p3: string, image: any, p4: string) {
+  const [selectedProject, setSelectedProject] = useState<typeof flyerProjects[0] | null>(null);
   return (
-    <div className="min-h-screen pt-20">
+    <div className="min-h-screen pt-20" style={{ backgroundColor: '#2d085e' }}>
       {/* Hero */}
-      <section className="relative py-24 px-6 overflow-hidden" style={{ backgroundColor: '#7c3aed' }}>
+      <section className="relative py-24 px-6 overflow-hidden">
         
         <div className="relative z-10 max-w-6xl mx-auto">
-          <motion.button
-            onClick={() => onNavigate('home')}
-            className="flex items-center gap-2 text-white/80 hover:text-white mb-8 transition-colors"
-            whileHover={{ x: -5 }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Voltar
-          </motion.button>
           
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -84,7 +79,7 @@ export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps, p0: number
       </section>
 
       {/* Portfolio Grid */}
-      <section className="py-24 px-6 bg-white">
+      <section className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {flyerProjects.map((project, index) => (
@@ -96,12 +91,43 @@ export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps, p0: number
                 whileHover={{ y: -12 }}
                 className="group relative cursor-pointer"
               >
-                <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 shadow-lg group-hover:shadow-2xl transition-all duration-300">
-                  <ImageWithFallback
-                    src={project.image}
-                    alt={project.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
+                <div 
+                  className="aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 shadow-lg group-hover:shadow-2xl transition-all duration-300 relative cursor-pointer"
+                  onMouseEnter={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.play();
+                  }}
+                  onMouseLeave={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.pause();
+                  }}
+                  onClick={() => {
+                    if(project.video) setSelectedProject(project);
+                  }}
+                >
+                  {project.video ? (
+                    <>
+                      <video
+                        src={project.video}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        muted
+                        loop
+                        preload="metadata"
+                      />
+                      {/* Play Button Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-all duration-300 pointer-events-none">
+                        <div className="w-16 h-16 rounded-full bg-white/80 flex items-center justify-center group-hover:bg-white/90 group-hover:scale-110 transition-all duration-300 shadow-lg">
+                          <FileVideo className="w-8 h-8 text-black ml-1" />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <ImageWithFallback
+                      src={project.image}
+                      alt={project.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  )}
                   
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -123,6 +149,27 @@ export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps, p0: number
           </div>
         </div>
       </section>
+
+      <Dialog open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] p-6 border-0 rounded-xl" style={{ backgroundColor: '#2d085e' }}>
+          {selectedProject && (
+            <div className="relative w-full">
+              {/* Vídeo */}
+              <div 
+                className="rounded-lg overflow-hidden border-2"
+                style={{ borderColor: '#fde68a', backgroundColor: '#000' }}
+              >
+                <video 
+                  src={selectedProject.video as string} 
+                  controls 
+                  autoPlay 
+                  className="w-full h-auto max-h-[65vh] object-contain"
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

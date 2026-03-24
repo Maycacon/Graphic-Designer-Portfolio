@@ -1,11 +1,11 @@
 import { motion } from "motion/react";
 import { AnimatedShapes } from "@/app/components/animated-shapes";
 
-export function HeroSection() {
-  const scrollToPortfolio = () => {
-    document.getElementById('portfolio')?.scrollIntoView({ behavior: 'smooth' });
-  };
+interface HeroSectionProps {
+  onNavigate: (page: string) => void;
+}
 
+export function HeroSection({ onNavigate }: HeroSectionProps) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#2d085e' }}>
       {/* Geometric shapes background */}
@@ -27,8 +27,8 @@ export function HeroSection() {
             Transformo ideias em experiências visuais impactantes através de edição de vídeos e design gráfico
           </p>
           <motion.button
-            onClick={scrollToPortfolio}
-            className="px-10 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105 hover:shadow-xl"
+            onClick={() => onNavigate('portfolio')}
+            className="px-10 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg focus:outline-none focus:ring-4 focus:ring-[#fff6b6]/60"
             style={{ backgroundColor: '#fff6b6', color: '#2d085e' }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

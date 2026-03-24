@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Navbar } from "@/app/components/navbar";
-import { HomePage } from "@/app/pages/home-page";
-import { PortfolioVideos } from "@/app/pages/portfolio-videos";
-import { PortfolioFlyers } from "@/app/pages/portfolio-flyers";
-import { PortfolioLeds } from "@/app/pages/portfolio-leds";
+import  HomePage  from "@/app/pages/home-page";
+import  PortfolioVideos  from "@/app/pages/portfolio-videos";
+import  PortfolioFlyers  from "@/app/pages/portfolio-flyers";
+import  PortfolioLeds  from "@/app/pages/portfolio-leds";
 import { ContactPage } from "@/app/pages/contact-page";
-import AboutPage from "./pages/AboutPage";
-import PortfolioGeral from "./pages/portfolio-geral";
+import { AboutPage } from "@/app/pages/AboutPage";
+import { PortfolioGeral } from "@/app/pages/portfolio-geral";
+import { AdminPage } from "@/app/pages/admin-page";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -19,7 +20,7 @@ export default function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <HomePage />;
+        return <HomePage onNavigate={handleNavigate} />;
       case 'portfolio':
         return <PortfolioGeral onNavigate={handleNavigate} />;
       case 'portfolio-videos':
@@ -32,6 +33,8 @@ export default function App() {
         return <ContactPage onNavigate={handleNavigate} />;
       case 'about':
         return <AboutPage onNavigate={handleNavigate} />;
+      case 'admin':
+        return <AdminPage onNavigate={handleNavigate} />;
       default:
         return <HomePage />;
     }

@@ -3,14 +3,15 @@ import { Instagram, Mail, MessageCircle, MapPin, Phone, ArrowLeft } from "lucide
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { ServicesSection } from "../components/services-section";
 import { AnimatedShapes } from "@/app/components/animated-shapes";
+import OxyImg from "../assets/img/OxyImage.jpeg";
 
 
 
-interface ContactPageProps {
+interface AboutPageProps {
   onNavigate: (page: string) => void;
 }
 
-export function ContactPage({ onNavigate }: ContactPageProps) {
+export function AboutPage({ onNavigate }: AboutPageProps) {
   function handleNavClick(arg0: string): void {
     throw new Error("Function not implemented.");
   }
@@ -29,11 +30,12 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
           {/* Image */}
           <div className="relative">
             <div className="aspect-square rounded-2xl overflow-hidden relative">
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' }} />
+              <div className="absolute inset-0 flex items-center justify-center p-6 text-center" />
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1639506523061-7359453854f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmFwaGljJTIwZGVzaWduZXIlMjB3b3Jrc3BhY2UlMjBwdXJwbGV8ZW58MXx8fHwxNzY5NTUyODc2fDA&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Designer workspace"
-                className="w-full h-full object-cover mix-blend-overlay opacity-80"
+                src={OxyImg}
+                alt="Foto de Oxy"
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105 rounded-2xl shadow-lg hover:shadow-2xl"
+                
               />
             </div>
             <motion.div
@@ -62,7 +64,7 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
               Meu trabalho combina criatividade, técnica e estratégia para entregar resultados que não apenas impressionam visualmente, mas também geram impacto real para os projetos dos meus clientes.
             </p>
             <div className="flex flex-wrap gap-4">
-              {['Adobe Premiere', 'After Effects', 'Photoshop', 'Illustrator'].map((skill) => (
+              {['Premiere Pro', 'After Effects', 'Photoshop', 'Illustrator'].map((skill) => (
 
                 <motion.button
                   key={skill}
@@ -92,4 +94,4 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
   );
 }
 
-export default ContactPage;
+export default AboutPage;
