@@ -123,12 +123,20 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "").trim();
 
-    if (email === "admin@admin.com" && password === "admin123") {
-      setIsAuthenticated(true);
+    const ADMIN_EMAIL = (import.meta as any).env?.VITE_ADMIN_EMAIL || '';
+    const ADMIN_PASSWORD = (import.meta as any).env?.VITE_ADMIN_PASSWORD || '';
+
+    if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        setIsAuthenticated(true);
+        return;
+      }
+      setLoginError("Credenciais inválidas. Tente novamente.");
       return;
     }
 
-    setLoginError("Credenciais inválidas. Tente novamente.");
+    // If admin env not set, refuse login and instruct to set env vars
+    setLoginError('Variáveis de ambiente de admin não definidas. Configure VITE_ADMIN_EMAIL e VITE_ADMIN_PASSWORD.');
   };
 
   const handleCreateOrUpdate = async (e: FormEvent<HTMLFormElement>) => {

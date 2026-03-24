@@ -27,5 +27,6 @@ coverage
 
 # vite
 .env
+.env.exemple
 .env.local
 .env.*.local
