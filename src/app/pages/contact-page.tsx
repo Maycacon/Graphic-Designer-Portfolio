@@ -13,15 +13,6 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
       <section className="relative py-24 px-6 overflow-hidden" style={{ backgroundColor: '#2d085e' }}>
         
         <div className="relative z-10 max-w-6xl mx-auto">
-          <motion.button
-            onClick={() => onNavigate('home')}
-            className="flex items-center gap-2 text-white/80 hover:text-white mb-8 transition-colors"
-            whileHover={{ x: -5 }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Voltar
-          </motion.button>
-          
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -61,9 +52,9 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
                     <Mail className="w-6 h-6 text-white" />
                   </div>
                   <div>
+                    <a href="mailto:arlyson.designer@gmail.com" className="text-gray-600 hover:text-[#7c3aed] transition-colors">
                     <h3 className="font-semibold mb-1">Email</h3>
-                    <a href="mailto:contato@seudominio.com" className="text-gray-600 hover:text-[#7c3aed] transition-colors">
-                      contato@seudominio.com
+                      arlyson.designer@gmail.com
                     </a>
                   </div>
                 </motion.div>
@@ -76,9 +67,11 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
                     <Phone className="w-6 h-6 text-white" />
                   </div>
                   <div>
+                    <a href="https://wa.me/5585991548288" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#7c3aed] transition-colors">
                     <h3 className="font-semibold mb-1">WhatsApp</h3>
-                    <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#7c3aed] transition-colors">
-                      +55 (11) 99999-9999
+                     <p>
+                      +55 (85) 99154-8288
+                      </p>
                     </a>
                   </div>
                 </motion.div>
@@ -91,8 +84,8 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
                     <Instagram className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">Instagram</h3>
                     <a href="https://www.instagram.com/oxyy_d/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#7c3aed] transition-colors">
+                    <h3 className="font-semibold mb-1">Instagram</h3>
                       @oxyy_d
                     </a>
                   </div>
@@ -132,7 +125,7 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <motion.a
-                    href="https://wa.me/5511999999999"
+                    href="https://wa.me/5585991548288"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-3 px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:shadow-2xl"
@@ -145,7 +138,7 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
                   </motion.a>
 
                   <motion.a
-                    href="mailto:contato@seudominio.com"
+                    href="mailto:arlyson.designer@gmail.com"
                     className="flex items-center justify-center gap-3 px-8 py-4 rounded-full font-semibold border-2 transition-all duration-300 hover:bg-white/10"
                     style={{ borderColor: '#fff6b6', color: '#fff6b6' }}
                     whileHover={{ scale: 1.05 }}

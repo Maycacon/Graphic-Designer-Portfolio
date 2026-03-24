@@ -22,6 +22,7 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
     },
     { id: 'contact', label: 'Contato' },
     { id: 'about', label: 'Sobre' },
+
   ];
 
   const handleNavClick = (pageId: string) => {
@@ -36,18 +37,19 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
           {/* Logo */}
           <motion.button
             onClick={() => handleNavClick('home')}
-            whileHover={{ scale: 1.3 }}
+            whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.8 }}
           >
             <img
               src={logoGif}
               alt="Logo"
-              className="w-20 h-20 object-contain cursor-pointer"
+              width={80}
+              height={80}
+              className="object-contain cursor-pointer"
             />
           </motion.button>
           {/* Title */}
           <span className="ml-2 text-white font-bold center font-sans text-xl">
-            teste
           </span>
 
           {/* Desktop Menu */}
@@ -56,60 +58,43 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
               <div key={item.id} className="relative group">
                 {item.submenu ? (
                   <>
+                    <motion.button
+                      onClick={() => handleNavClick(item.id)}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="font-semibold text-[#fff6b6] hover:text-[#FEFF4B] transition-colors"
+                    >
+                      {item.label}
+                    </motion.button>
 
-
-                    <button className="font-semibold text-[#fff6b6] hover:text-[#FEFF4B]transition-colors">
-
-                      <motion.button
-                        onClick={() => handleNavClick('portfolio')}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-
-                        {item.label}
-                      </motion.button>
-                    </button>
-
-
-                    <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 min-w-[200px]">
+                    <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg py-2 px-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 min-w-[200px]">
                       {item.submenu.map((subItem) => (
-
-                        <button
+                        <motion.button
                           key={subItem.id}
                           onClick={() => handleNavClick(subItem.id)}
-                          className={`block w-full text-left px-6 py-2 hover:bg-gray-50 transition-colors ${currentPage === subItem.id ? 'text-[#7c3aed] font-semibold' : 'text-gray-700'
-                            }`}
+                          whileHover={{ x: 3 }}
+                          whileTap={{ x: -3 }}
+                          className={`block w-full text-left px-6 py-2 hover:bg-gray-50 transition-colors ${
+                            currentPage === subItem.id ? 'text-[#7c3aed] font-semibold' : 'text-gray-700'
+                          }`}
                         >
-                          <motion.button
-                            onClick={() => handleNavClick('home')}
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            {subItem.label}
-                          </motion.button>
-                        </button>
-
+                          {subItem.label}
+                        </motion.button>
                       ))}
                     </div>
                   </>
                 ) : (
-
-                  <button
+                  <motion.button
                     onClick={() => handleNavClick(item.id)}
-                    className={`font-semibold transition-colors ${currentPage === item.id ? 'text-[#fff6b6]' : 'text-[#fff6b6]'
-                      }`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`font-semibold transition-colors ${
+                      currentPage === item.id ? 'text-[#FEFF4B]' : 'text-[#fff6b6]'
+                    }`}
                   >
-                    <motion.button
-                      onClick={() => handleNavClick('home')}
-                      whileHover={{ scale: 1.2 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {item.label}
-                    </motion.button>
-                  </button>
-
-                )
-                }
+                    {item.label}
+                  </motion.button>
+                )}
               </div>
             ))}
           </div>
@@ -117,8 +102,7 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2"
-            style={{ color: '#7c3aed' }}
+            className="md:hidden p-2 text-[#fff6b6]"
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -131,22 +115,25 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden overflow-hidden"
+              className="md:hidden overflow-hidden bg-[#2d085e]/95 rounded-xl mt-2"
             >
-              <div className="py-4 space-y-2">
+              <div className="py-4 px-4 space-y-2">
                 {navItems.map((item) => (
                   <div key={item.id}>
                     {item.submenu ? (
                       <>
-                        <div className="font-semibold text-gray-700 px-4 py-2">
+                        <div className="font-semibold text-[#fff6b6] px-4 py-2">
                           {item.label}
                         </div>
                         {item.submenu.map((subItem) => (
                           <button
                             key={subItem.id}
                             onClick={() => handleNavClick(subItem.id)}
-                            className={`block w-full text-left px-8 py-2 transition-colors ${currentPage === subItem.id ? 'text-[#7c3aed] font-semibold bg-gray-50' : 'text-gray-600'
-                              }`}
+                            className={`block w-full text-left px-8 py-2 transition-colors ${
+                              currentPage === subItem.id 
+                                ? 'text-[#FEFF4B] font-semibold bg-white/10' 
+                                : 'text-white/80'
+                            }`}
                           >
                             {subItem.label}
                           </button>
@@ -155,8 +142,11 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
                     ) : (
                       <button
                         onClick={() => handleNavClick(item.id)}
-                        className={`block w-full text-left px-4 py-2 font-semibold transition-colors ${currentPage === item.id ? 'text-[#7c3aed] bg-gray-50' : 'text-gray-700'
-                          }`}
+                        className={`block w-full text-left px-4 py-2 font-semibold transition-colors ${
+                          currentPage === item.id 
+                            ? 'text-[#FEFF4B] bg-white/10' 
+                            : 'text-[#fff6b6]'
+                        }`}
                       >
                         {item.label}
                       </button>

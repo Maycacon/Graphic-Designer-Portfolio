@@ -1,11 +1,11 @@
 import { motion } from "motion/react";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
-import { AnimatedShapes } from "@/app/components/animated-shapes";
-import { Play, ArrowLeft } from "lucide-react";
-import { PortfolioFlyers } from "./portfolio-flyers";
-import { PortfolioLeds } from "./portfolio-leds";
-import { PortfolioVideos } from "./portfolio-videos";
-import { get } from "react-hook-form";
+import { Play, ArrowLeft, FileVideo } from "lucide-react";
+import { useState } from "react";
+import { Dialog, DialogContent } from "@/app/components/ui/dialog";
+import { useAdminProjects } from "@/app/lib/useAdminProjects";
+import { flyerProjects as fallbackFlyers, ledsProjects as fallbackLeds, videoProjects as fallbackVideos } from "@/app/lib/fallback-projects";
+
 
 interface PortfolioGeralProps {
   onNavigate: (page: string) => void;
@@ -13,82 +13,270 @@ interface PortfolioGeralProps {
 
 
 export function PortfolioGeral({ onNavigate }: PortfolioGeralProps) {
+  const { projects } = useAdminProjects();
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const all = projects ?? [...fallbackFlyers, ...fallbackLeds, ...fallbackVideos];
   return (
-    <div className="min-h-screen py-10" style={{ backgroundColor: '#2d085e' }}>
-      {/* Hero */}
-      <section className="relative py-24 px-6 overflow-hidden" style={{ backgroundColor: '#2d085e' }}>
-        
-        <div className="relative z-10 max-w-6xl mx-auto">
-          <motion.button
-            onClick={() => onNavigate('home')}
-            className="flex items-center gap-2 text-white/80 hover:text-white mb-8 transition-colors"
-            whileHover={{ x: -5 }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Voltar
-          </motion.button>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-              Motion <span style={{ color: '#fde68a' }}>Graphics</span>
-            </h1>
-            <p className="text-xl text-white/90 max-w-2xl">
-              Animações sofisticadas que trazem vida às marcas através de movimento, ritmo e storytelling visual
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Portfolio Grid */}
-      <section className="py-24 px-6 bg-[#2d085e]">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {Projects.map((project, index) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -12 }}
-                className="group relative cursor-pointer"
+    <div className="min-h-screen pt-20" style={{ backgroundColor: '#2d085e' }}>
+      {/* Portfolio Sections */}
+      <section className="py-24 px-4">
+        <div className="max-w-7xl mx-auto space-y-24">
+          {/* Flyers Section */}
+          <div>
+            <div className="flex items-center justify-between mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold text-white">Flyers</h2>
+              <motion.button
+                onClick={() => onNavigate('portfolio-flyers')}
+                className="px-8 py-4 bg-[#fde68a] text-[#2d085e] rounded-full font-semibold hover:bg-[#fde68a]/80 transition-colors shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <div className="aspect-video rounded-2xl overflow-hidden bg-gray-100 shadow-lg group-hover:shadow-2xl transition-all duration-300">
-                  <ImageWithFallback
-                    src={project.image}
-                    alt={project.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  
+                Ver Todos
+              </motion.button>
+            </div>
+            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {all.filter(p => p.category === 'Flyers').map((project, index) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.08 }}
+                  whileHover={{ y: -16, scale: 1.03 }}
+                  className="group relative cursor-pointer shadow-xl rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md hover:shadow-2xl transition-all duration-300"
+                  onClick={() => {
+                    if(project.video) setSelectedProject(project);
+                  }}
+                  onMouseEnter={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.play();
+                  }}
+                  onMouseLeave={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.pause();
+                  }}
+                >
+                  <div className="aspect-video w-full h-56 bg-gray-200 dark:bg-gray-800 relative">
+                    {project.video ? (
+                      <>
+                        <video
+                          src={project.video}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          muted
+                          loop
+                          preload="metadata"
+                        />
+                        {/* Play Button Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-all duration-300 pointer-events-none">
+                          <div className="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center group-hover:bg-white/90 group-hover:scale-110 transition-all duration-300 shadow-lg">
+                            <FileVideo className="w-6 h-6 text-black ml-0.5" />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <ImageWithFallback
+                        src={project.image}
+                        alt={project.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+                  </div>
                   {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                      <motion.div
-                        className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4"
-                        whileHover={{ scale: 1.1 }}
-                      >
-                        <Play className="w-10 h-10 text-white fill-white ml-1" />
-                      </motion.div>
-                      <span className="text-xs font-semibold px-3 py-1 rounded-full mb-2" style={{ backgroundColor: '#fde68a', color: '#1f1f1f' }}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                    <div>
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full mb-2 inline-block" style={{ backgroundColor: '#fde68a', color: '#2d085e' }}>
                         {project.category}
                       </span>
-                      <h3 className="text-xl font-bold text-white mb-1">
+                      <h3 className="text-2xl font-bold text-white mb-1">
                         {project.title}
                       </h3>
-                      <p className="text-sm text-white/80">
+                      <p className="text-base text-white/90 mb-3">
                         {project.description}
                       </p>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* LEDs Section */}
+          <div>
+            <div className="flex items-center justify-between mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold text-white">LEDs</h2>
+              <motion.button
+                onClick={() => onNavigate('portfolio-leds')}
+                className="px-8 py-4 bg-[#fde68a] text-[#2d085e] rounded-full font-semibold hover:bg-[#fde68a]/80 transition-colors shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Ver Todos
+              </motion.button>
+            </div>
+            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {all.filter(p => p.category === 'Leds').map((project, index) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.08 }}
+                  whileHover={{ y: -16, scale: 1.03 }}
+                  className="group relative cursor-pointer shadow-xl rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md hover:shadow-2xl transition-all duration-300"
+                  onClick={() => {
+                    if(project.video) setSelectedProject(project);
+                  }}
+                  onMouseEnter={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.play();
+                  }}
+                  onMouseLeave={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.pause();
+                  }}
+                >
+                  <div className="aspect-video w-full h-56 bg-gray-200 dark:bg-gray-800 relative">
+                    {project.video ? (
+                      <>
+                        <video
+                          src={project.video}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          muted
+                          loop
+                          preload="metadata"
+                        />
+                        {/* Play Button Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-all duration-300 pointer-events-none">
+                          <div className="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center group-hover:bg-white/90 group-hover:scale-110 transition-all duration-300 shadow-lg">
+                            <FileVideo className="w-6 h-6 text-black ml-0.5" />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <ImageWithFallback
+                        src={project.image}
+                        alt={project.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+                  </div>
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                    <div>
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full mb-2 inline-block" style={{ backgroundColor: '#fde68a', color: '#2d085e' }}>
+                        {project.category}
+                      </span>
+                      <h3 className="text-2xl font-bold text-white mb-1">
+                        {project.title}
+                      </h3>
+                      <p className="text-base text-white/90 mb-3">
+                        {project.description}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Vídeos Section */}
+          <div>
+            <div className="flex items-center justify-between mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold text-white">Vídeos</h2>
+              <motion.button
+                onClick={() => onNavigate('portfolio-videos')}
+                className="px-8 py-4 bg-[#fde68a] text-[#2d085e] rounded-full font-semibold hover:bg-[#fde68a]/80 transition-colors shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Ver Todos
+              </motion.button>
+            </div>
+            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {all.filter(p => p.category === 'Vídeos').map((project, index) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.08 }}
+                  whileHover={{ y: -16, scale: 1.03 }}
+                  className="group relative cursor-pointer shadow-xl rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md hover:shadow-2xl transition-all duration-300"
+                  onClick={() => {
+                    if(project.video) setSelectedProject(project);
+                  }}
+                  onMouseEnter={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.play();
+                  }}
+                  onMouseLeave={(e) => {
+                    const video = e.currentTarget.querySelector('video');
+                    if(video) video.pause();
+                  }}
+                >
+                  <div className="aspect-video w-full h-56 bg-gray-200 dark:bg-gray-800 relative">
+                    {project.video ? (
+                      <>
+                        <video
+                          src={project.video}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          muted
+                          loop
+                          preload="metadata"
+                        />
+                        {/* Play Button Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-all duration-300 pointer-events-none">
+                          <div className="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center group-hover:bg-white/90 group-hover:scale-110 transition-all duration-300 shadow-lg">
+                            <FileVideo className="w-6 h-6 text-black ml-0.5" />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <ImageWithFallback
+                        src={project.image}
+                        alt={project.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+                  </div>
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                    <div>
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full mb-2 inline-block" style={{ backgroundColor: '#fde68a', color: '#2d085e' }}>
+                        {project.category}
+                      </span>
+                      <h3 className="text-2xl font-bold text-white mb-1">
+                        {project.title}
+                      </h3>
+                      <p className="text-base text-white/90 mb-3">
+                        {project.description}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
+
+      <Dialog open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] p-6 border-0 rounded-xl" style={{ backgroundColor: '#2d085e' }}>
+          {selectedProject && (
+            <div className="relative w-full">
+              {/* Vídeo */}
+              <div 
+                className="rounded-lg overflow-hidden border-2"
+                style={{ borderColor: '#fde68a', backgroundColor: '#000' }}
+              >
+                <video 
+                  src={selectedProject.video as string} 
+                  controls 
+                  autoPlay 
+                  className="w-full h-auto max-h-[65vh] object-contain"
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

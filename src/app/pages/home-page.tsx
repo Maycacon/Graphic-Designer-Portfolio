@@ -1,9 +1,9 @@
 import { HeroSection } from "@/app/components/hero-section";
 
-export function HomePage() {
+export function HomePage({ onNavigate }: { onNavigate: (page: string) => void }) {
   return (
     <>
-      <HeroSection />
+      <HeroSection onNavigate={onNavigate} />
     </>
   );
 }
