@@ -19,12 +19,12 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
           transition={{ duration: 0.8 }}
         >
           <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tight">
-            Design em
+            Motion
             <br />
-            <span style={{ color: '#fff6b6' }}>Movimento</span>
+            <span style={{ color: '#fff6b6' }}>Graphics</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-2xl mx-auto">
-            Transformo ideias em experiências visuais impactantes através de edição de vídeos e design gráfico
+            Transformo ideias em experiências visuais impactantes através de edição de vídeos e design gráfico através do motion graphics.
           </p>
           <motion.button
             onClick={() => onNavigate('portfolio')}
