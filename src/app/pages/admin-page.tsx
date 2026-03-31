@@ -59,12 +59,14 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
       const data = (await response.json()) as VideoItem[];
       // normalize and merge with local
       const normalized = data.map((p) => ({ ...p, category: normalizeCategory(p.category) }));
-      const local = loadLocalProjects();
-      const merged = [...normalized, ...local.filter((lp: any) => !normalized.some((n) => n.id === lp.id))];
+      const localRaw = loadLocalProjects();
+      const local = Array.isArray(localRaw) ? localRaw : [];
+      const merged = [...normalized, ...local.filter((lp: any) => !normalized.some((n: any) => String(n.id) === String(lp.id)))];
       setVideos(merged);
     } catch {
-      const local = loadLocalProjects();
-      const merged = [...initialVideos, ...local.filter((lp: any) => !initialVideos.some((i) => i.id === lp.id))];
+      const localRaw = loadLocalProjects();
+      const local = Array.isArray(localRaw) ? localRaw : [];
+      const merged = [...initialVideos, ...local.filter((lp: any) => !initialVideos.some((i: any) => String(i.id) === String(lp.id)))];
       setVideos(merged);
       setErrorMsg("Não foi possível conectar ao servidor. Usando dados locais.");
     } finally {
