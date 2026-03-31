@@ -123,8 +123,8 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "").trim();
 
-    const ADMIN_EMAIL = (import.meta as any).env?.VITE_ADMIN_EMAIL || '';
-    const ADMIN_PASSWORD = (import.meta as any).env?.VITE_ADMIN_PASSWORD || '';
+    const ADMIN_EMAIL = (import.meta as any).env?.VITE_ADMIN_EMAIL || 'arlysondesigner@gmail.com';
+    const ADMIN_PASSWORD = (import.meta as any).env?.VITE_ADMIN_PASSWORD || 'arlyson123';
 
     if (ADMIN_EMAIL && ADMIN_PASSWORD) {
       if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
