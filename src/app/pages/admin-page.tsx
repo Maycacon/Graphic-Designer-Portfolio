@@ -9,81 +9,59 @@ import {
 } from "@/app/components/ui/dialog";
 import { normalizeCategory, CANONICAL_CATEGORIES } from "@/app/lib/category-utils";
 import { saveLocalProjects, loadLocalProjects } from "@/app/lib/local-projects";
+import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { useSupabaseProjects, ProjectType, Project } from "@/lib/useSupabaseProjects";
+import { useSupabaseStorage } from "@/lib/useSupabaseStorage";
 
 interface AdminPageProps {
   onNavigate: (page: string) => void;
 }
 
-type ProjectType = 'videos' | 'leds' | 'flyers';
-
-type Project = {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  video_url?: string;
-  image_url: string;
-  type: ProjectType;
-  created_at?: string;
-  updated_at?: string;
-};
-
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-const TOKEN_KEY = 'admin_auth_token';
-
 export function AdminPage({ onNavigate }: AdminPageProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { session, user, loading: authLoading, signIn, signOut } = useSupabaseAuth();
+  const { loading, error: fetchError, fetchProjects, createProject, updateProject, deleteProject } = useSupabaseProjects();
+  const { uploading: isUploading, uploadImage, uploadVideo } = useSupabaseStorage();
+
   const [loginError, setLoginError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [projectType, setProjectType] = useState<ProjectType>('videos');
+  const [projectType, setProjectType] = useState<ProjectType>("videos");
   const [formData, setFormData] = useState<Partial<Project>>({
     title: "",
     category: "",
     description: "",
     video_url: "",
     image_url: "",
-    type: 'videos',
+    type: "videos",
   });
-  const [isUploading, setIsUploading] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCreateEditModalOpen, setIsCreateEditModalOpen] = useState(false);
-  const [filter, setFilter] = useState<ProjectType>('videos');
+  const [filter, setFilter] = useState<ProjectType>("videos");
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token) {
-      setIsAuthenticated(true);
-      fetchProjects(token, 'videos');
+    if (session?.user) {
+      loadProjects("videos");
     }
-  }, []);
+  }, [session]);
 
-  const fetchProjects = async (token: string, type: ProjectType) => {
-    setIsLoading(true);
-    setErrorMsg("");
+  const loadProjects = async (type: ProjectType) => {
     try {
-      const response = await fetch(`${API_BASE}/api/projects?type=${type}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error("Falha ao carregar dados do servidor");
-      const data = (await response.json()) as Project[];
+      const data = await fetchProjects(type);
       const normalized = data.map((p) => ({
         ...p,
         category: normalizeCategory(p.category),
       }));
       setProjects(normalized);
-    } catch {
+      setErrorMsg("");
+    } catch (err) {
       setErrorMsg("Não foi possível conectar ao servidor.");
       const local = loadLocalProjects();
       if (Array.isArray(local)) {
         setProjects(local.filter((p: any) => p.type === type));
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -95,42 +73,27 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
       description: "",
       video_url: "",
       image_url: "",
-      type: 'videos',
+      type: "videos",
     });
   };
 
   const uploadFile = async (file: File, type: ProjectType): Promise<string | null> => {
     if (!file) return null;
-    setIsUploading(true);
     try {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) throw new Error("Not authenticated");
-
-      const fd = new FormData();
-      fd.append('file', file);
-
-      const resp = await fetch(`${API_BASE}/api/upload?type=${type}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-
-      if (resp.ok) {
-        const json = await resp.json();
-        return json.url || null;
+      if (type === "videos") {
+        return await uploadVideo(file);
+      } else {
+        return await uploadImage(file);
       }
     } catch (e) {
-      console.error('Upload error:', e);
+      console.error("Upload error:", e);
+      return null;
     }
-
-    setIsUploading(false);
-    return null;
   };
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoginError("");
-    setIsLoading(true);
 
     const form = e.currentTarget as HTMLFormElement;
     const formDataObj = new FormData(form);
@@ -138,27 +101,15 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
     const password = String(formDataObj.get("password") || "").trim();
 
     try {
-      const response = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
+      const { session: newSession, error } = await signIn(email, password);
+      if (error) throw error;
+      if (newSession) {
+        await loadProjects("videos");
       }
-
-      const data = await response.json();
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setIsAuthenticated(true);
-      fetchProjects(data.token, 'videos');
     } catch (error) {
       setLoginError(
-        error instanceof Error ? error.message : 'Erro ao fazer login. Tente novamente.'
+        error instanceof Error ? error.message : "Erro ao fazer login. Tente novamente."
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -180,14 +131,8 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
     const normalizedCategory = normalizeCategory(formData.category);
     if (!CANONICAL_CATEGORIES.includes(normalizedCategory)) {
       setErrorMsg(
-        'Escolha uma categoria válida entre: ' + CANONICAL_CATEGORIES.join(', ')
+        "Escolha uma categoria válida entre: " + CANONICAL_CATEGORIES.join(", ")
       );
-      return;
-    }
-
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setErrorMsg("Sessão expirada. Faça login novamente.");
       return;
     }
 
@@ -202,61 +147,35 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
 
     try {
       if (editingId) {
-        const response = await fetch(`${API_BASE}/api/projects/${editingId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(projectData),
-        });
-        if (!response.ok) throw new Error("Falha ao atualizar");
-        const updated = await response.json();
+        const updated = await updateProject(editingId, projectData);
         setProjects((prev) =>
           prev.map((p) => (p.id === editingId ? updated : p))
         );
       } else {
-        const response = await fetch(`${API_BASE}/api/projects`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(projectData),
-        });
-        if (!response.ok) throw new Error("Falha ao criar");
-        const created = await response.json();
+        const created = await createProject(projectData as any);
         setProjects((prev) => [created, ...prev]);
       }
       resetForm();
       setIsCreateEditModalOpen(false);
     } catch (error) {
       setErrorMsg(
-        error instanceof Error ? error.message : 'Erro ao salvar projeto'
+        error instanceof Error ? error.message : "Erro ao salvar projeto"
       );
     }
   };
 
   const handleDelete = async (id: string) => {
     setErrorMsg("");
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) return;
-
     try {
-      const response = await fetch(`${API_BASE}/api/projects/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error("Falha ao excluir");
+      await deleteProject(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (error) {
-      setErrorMsg('Erro ao excluir projeto');
+      setErrorMsg("Erro ao excluir projeto");
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await signOut();
     setProjects([]);
     resetForm();
   };
@@ -289,7 +208,15 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
     }
   };
 
-  if (!isAuthenticated) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen pt-24 bg-gradient-to-b from-[#2d085e] to-[#1b0b43] text-white px-6 flex items-center justify-center">
+        <p className="text-xl">Carregando autenticação...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
     return (
       <div className="min-h-screen pt-24 bg-gradient-to-b from-[#2d085e] to-[#1b0b43] text-white px-6">
         <div className="max-w-md mx-auto p-8 bg-white/10 backdrop-blur-md rounded-xl shadow-xl">
@@ -315,10 +242,10 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
             />
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={authLoading}
               className="w-full bg-yellow-300 text-black rounded py-2 font-semibold hover:bg-yellow-400 transition disabled:opacity-50"
             >
-              {isLoading ? 'Entrando...' : 'Entrar'}
+              {authLoading ? "Entrando..." : "Entrar"}
             </button>
           </form>
           <button
@@ -355,7 +282,7 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
         </div>
 
         {errorMsg && <p className="mb-4 text-red-300">{errorMsg}</p>}
-        {isLoading && <p className="mb-4 text-yellow-200">Carregando projetos...</p>}
+        {loading && <p className="mb-4 text-yellow-200">Carregando projetos...</p>}
 
         <section className="mb-8 p-6 bg-white/10 rounded-xl shadow-sm">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -368,7 +295,7 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
                 Criar novo
               </button>
               <button
-                onClick={() => fetchProjects(localStorage.getItem(TOKEN_KEY)!, filter)}
+                onClick={() => loadProjects(filter)}
                 className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded"
               >
                 Atualizar
@@ -386,8 +313,7 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
               onChange={(e) => {
                 const type = e.target.value as ProjectType;
                 setFilter(type);
-                const token = localStorage.getItem(TOKEN_KEY);
-                if (token) fetchProjects(token, type);
+                loadProjects(type);
               }}
               className="rounded px-3 py-2 text-black"
             >
@@ -656,7 +582,7 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
                   className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded disabled:opacity-50"
                   disabled={isUploading}
                 >
-                  {editingId ? 'Salvar edição' : 'Criar novo'}
+                  {editingId ? "Salvar edição" : "Criar novo"}
                 </button>
                 <button
                   type="button"
