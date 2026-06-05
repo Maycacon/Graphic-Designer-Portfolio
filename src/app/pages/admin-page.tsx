@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,6 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/app/components/ui/dialog";
-import { videoProjects as fallbackVideos } from "@/app/lib/fallback-projects";
 import { normalizeCategory, CANONICAL_CATEGORIES } from "@/app/lib/category-utils";
 import { saveLocalProjects, loadLocalProjects } from "@/app/lib/local-projects";
 
@@ -15,137 +14,164 @@ interface AdminPageProps {
   onNavigate: (page: string) => void;
 }
 
-type VideoItem = {
-  id: number;
+type ProjectType = 'videos' | 'leds' | 'flyers';
+
+type Project = {
+  id: string;
   title: string;
   category: string;
   description: string;
-  video?: string;
-  image: string;
+  video_url?: string;
+  image_url: string;
+  type: ProjectType;
+  created_at?: string;
+  updated_at?: string;
 };
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+const TOKEN_KEY = 'admin_auth_token';
 
 export function AdminPage({ onNavigate }: AdminPageProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<Partial<VideoItem>>({
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [projectType, setProjectType] = useState<ProjectType>('videos');
+  const [formData, setFormData] = useState<Partial<Project>>({
     title: "",
     category: "",
     description: "",
-    video: "",
-    image: "",
+    video_url: "",
+    image_url: "",
+    type: 'videos',
   });
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCreateEditModalOpen, setIsCreateEditModalOpen] = useState(false);
-  const [filter, setFilter] = useState<string>('Todos');
+  const [filter, setFilter] = useState<ProjectType>('videos');
 
-  const initialVideos = useMemo(() => fallbackVideos, []);
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      setIsAuthenticated(true);
+      fetchProjects(token, 'videos');
+    }
+  }, []);
 
-  const fetchVideos = async () => {
+  const fetchProjects = async (token: string, type: ProjectType) => {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const response = await fetch(`${API_BASE}/videos`);
+      const response = await fetch(`${API_BASE}/api/projects?type=${type}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!response.ok) throw new Error("Falha ao carregar dados do servidor");
-      const data = (await response.json()) as VideoItem[];
-      // normalize and merge with local
-      const normalized = data.map((p) => ({ ...p, category: normalizeCategory(p.category) }));
-      const localRaw = loadLocalProjects();
-      const local = Array.isArray(localRaw) ? localRaw : [];
-      const merged = [...normalized, ...local.filter((lp: any) => !normalized.some((n: any) => String(n.id) === String(lp.id)))];
-      setVideos(merged);
+      const data = (await response.json()) as Project[];
+      const normalized = data.map((p) => ({
+        ...p,
+        category: normalizeCategory(p.category),
+      }));
+      setProjects(normalized);
     } catch {
-      const localRaw = loadLocalProjects();
-      const local = Array.isArray(localRaw) ? localRaw : [];
-      const merged = [...initialVideos, ...local.filter((lp: any) => !initialVideos.some((i: any) => String(i.id) === String(lp.id)))];
-      setVideos(merged);
-      setErrorMsg("Não foi possível conectar ao servidor. Usando dados locais.");
+      setErrorMsg("Não foi possível conectar ao servidor.");
+      const local = loadLocalProjects();
+      if (Array.isArray(local)) {
+        setProjects(local.filter((p: any) => p.type === type));
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchVideos();
-    }
-  }, [isAuthenticated]);
-
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ title: "", category: "", description: "", video: "", image: "" });
+    setFormData({
+      title: "",
+      category: "",
+      description: "",
+      video_url: "",
+      image_url: "",
+      type: 'videos',
+    });
   };
 
-  // Upload helper: tries POST to API_BASE/upload and falls back to object URL
-  const uploadFile = async (file: File): Promise<string | null> => {
+  const uploadFile = async (file: File, type: ProjectType): Promise<string | null> => {
     if (!file) return null;
     setIsUploading(true);
-    setUploadProgress(null);
     try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) throw new Error("Not authenticated");
+
       const fd = new FormData();
       fd.append('file', file);
 
-      const resp = await fetch(`${API_BASE}/upload`, {
+      const resp = await fetch(`${API_BASE}/api/upload?type=${type}`, {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
 
       if (resp.ok) {
         const json = await resp.json();
-        // expect { url: 'https://...' } or similar
-        const url = (json && (json.url || json.path || json.file)) || null;
-        setIsUploading(false);
-        return url;
+        return json.url || null;
       }
     } catch (e) {
-      // ignore and fallback
+      console.error('Upload error:', e);
     }
 
-    // Fallback: create blob URL for immediate preview (not persistent)
-    const fallback = URL.createObjectURL(file);
     setIsUploading(false);
-    return fallback;
+    return null;
   };
 
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoginError("");
+    setIsLoading(true);
 
     const form = e.currentTarget as HTMLFormElement;
-    const formData = new FormData(form);
-    const email = String(formData.get("email") || "").trim();
-    const password = String(formData.get("password") || "").trim();
+    const formDataObj = new FormData(form);
+    const email = String(formDataObj.get("email") || "").trim();
+    const password = String(formDataObj.get("password") || "").trim();
 
-    const ADMIN_EMAIL = (import.meta as any).env?.VITE_ADMIN_EMAIL || 'arlysondesigner@gmail.com';
-    const ADMIN_PASSWORD = (import.meta as any).env?.VITE_ADMIN_PASSWORD || 'arlyson123';
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (ADMIN_EMAIL && ADMIN_PASSWORD) {
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        setIsAuthenticated(true);
-        return;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Login failed');
       }
-      setLoginError("Credenciais inválidas. Tente novamente.");
-      return;
-    }
 
-    // If admin env not set, refuse login and instruct to set env vars
-    setLoginError('Variáveis de ambiente de admin não definidas. Configure VITE_ADMIN_EMAIL e VITE_ADMIN_PASSWORD.');
+      const data = await response.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      setIsAuthenticated(true);
+      fetchProjects(data.token, 'videos');
+    } catch (error) {
+      setLoginError(
+        error instanceof Error ? error.message : 'Erro ao fazer login. Tente novamente.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCreateOrUpdate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.category || !formData.description || !formData.image) {
-      setErrorMsg("Preencha pelo menos título, categoria, descrição e imagem.");
+    if (
+      !formData.title ||
+      !formData.category ||
+      !formData.description ||
+      !formData.image_url
+    ) {
+      setErrorMsg("Preencha título, categoria, descrição e imagem.");
       return;
     }
 
@@ -153,105 +179,113 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
 
     const normalizedCategory = normalizeCategory(formData.category);
     if (!CANONICAL_CATEGORIES.includes(normalizedCategory)) {
-      setErrorMsg('Escolha uma categoria válida entre: ' + CANONICAL_CATEGORIES.join(', '));
+      setErrorMsg(
+        'Escolha uma categoria válida entre: ' + CANONICAL_CATEGORIES.join(', ')
+      );
       return;
     }
-    const newVideo: VideoItem = {
-      id: editingId ?? Date.now(),
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setErrorMsg("Sessão expirada. Faça login novamente.");
+      return;
+    }
+
+    const projectData = {
+      type: projectType,
       title: formData.title,
       category: normalizedCategory,
       description: formData.description,
-      video: formData.video || "",
-      image: formData.image,
+      video_url: formData.video_url || undefined,
+      image_url: formData.image_url,
     };
 
     try {
       if (editingId) {
-        const response = await fetch(`${API_BASE}/videos/${editingId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newVideo),
+        const response = await fetch(`${API_BASE}/api/projects/${editingId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(projectData),
         });
-        if (!response.ok) throw new Error("Falha ao atualizar no servidor");
-        const updated = videos.map((v) => (v.id === editingId ? newVideo : v));
-        setVideos(updated);
-        try { saveLocalProjects(updated); } catch {};
+        if (!response.ok) throw new Error("Falha ao atualizar");
+        const updated = await response.json();
+        setProjects((prev) =>
+          prev.map((p) => (p.id === editingId ? updated : p))
+        );
       } else {
-        const response = await fetch(`${API_BASE}/videos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newVideo),
+        const response = await fetch(`${API_BASE}/api/projects`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(projectData),
         });
-        if (!response.ok) throw new Error("Falha ao criar no servidor");
+        if (!response.ok) throw new Error("Falha ao criar");
         const created = await response.json();
-        const toAdd = (created as VideoItem) || newVideo;
-        setVideos((prev) => {
-          const next = [...prev, toAdd];
-          try { saveLocalProjects(next); } catch {}
-          return next;
-        });
+        setProjects((prev) => [created, ...prev]);
       }
-    } catch {
-      setErrorMsg("Erro de conexão com servidor: operação executada localmente.");
-      if (editingId) {
-        setVideos((prev) => {
-          const next = prev.map((v) => (v.id === editingId ? newVideo : v));
-          try { saveLocalProjects(next); } catch {}
-          return next;
-        });
-      } else {
-        setVideos((prev) => {
-          const next = [...prev, newVideo];
-          try { saveLocalProjects(next); } catch {}
-          return next;
-        });
-      }
-    } finally {
       resetForm();
       setIsCreateEditModalOpen(false);
+    } catch (error) {
+      setErrorMsg(
+        error instanceof Error ? error.message : 'Erro ao salvar projeto'
+      );
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     setErrorMsg("");
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+
     try {
-      const response = await fetch(`${API_BASE}/videos/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Falha ao excluir no servidor");
-      setVideos((prev) => prev.filter((video) => video.id !== id));
-      try { saveLocalProjects(videos.filter((video) => video.id !== id)); } catch {}
-    } catch {
-      setErrorMsg("Erro ao excluir no servidor. Excluído localmente.");
-      setVideos((prev) => {
-        const next = prev.filter((video) => video.id !== id);
-        try { saveLocalProjects(next); } catch {}
-        return next;
+      const response = await fetch(`${API_BASE}/api/projects/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       });
+      if (!response.ok) throw new Error("Falha ao excluir");
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      setErrorMsg('Erro ao excluir projeto');
     }
   };
 
-  const openVideoDetails = (video: VideoItem) => {
-    setSelectedVideo(video);
+  const handleLogout = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    setIsAuthenticated(false);
+    setProjects([]);
+    resetForm();
+  };
+
+  const openProjectDetails = (project: Project) => {
+    setSelectedProject(project);
     setIsDetailsModalOpen(true);
   };
 
   const openCreateModal = () => {
     resetForm();
+    setProjectType('videos');
     setEditingId(null);
     setIsCreateEditModalOpen(true);
   };
 
-  const handleEdit = (video: VideoItem) => {
-    setEditingId(video.id);
-    setFormData({ ...video });
+  const handleEdit = (project: Project) => {
+    setEditingId(project.id);
+    setProjectType(project.type);
+    setFormData(project);
     setIsCreateEditModalOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (selectedVideo) {
-      await handleDelete(selectedVideo.id);
+    if (selectedProject) {
+      await handleDelete(selectedProject.id);
       setIsDeleteDialogOpen(false);
       setIsDetailsModalOpen(false);
-      setSelectedVideo(null);
+      setSelectedProject(null);
     }
   };
 
@@ -260,14 +294,40 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
       <div className="min-h-screen pt-24 bg-gradient-to-b from-[#2d085e] to-[#1b0b43] text-white px-6">
         <div className="max-w-md mx-auto p-8 bg-white/10 backdrop-blur-md rounded-xl shadow-xl">
           <h1 className="text-3xl font-bold mb-4">Área Administrativa</h1>
-          <p className="mb-4 text-yellow-200">Faça login com admin@admin.com / admin123</p>
-          {loginError && <p className="text-sm text-red-300 mb-3">{loginError}</p>}
+          <p className="mb-4 text-yellow-200">Faça login com seu e-mail e senha Supabase</p>
+          {loginError && (
+            <p className="text-sm text-red-300 mb-3">{loginError}</p>
+          )}
           <form onSubmit={handleLogin} className="space-y-3">
-            <input name="email" type="email" placeholder="Email" className="w-full rounded px-3 py-2 text-black" required />
-            <input name="password" type="password" placeholder="Senha" className="w-full rounded px-3 py-2 text-black" required />
-            <button type="submit" className="w-full bg-yellow-300 text-black rounded py-2 font-semibold hover:bg-yellow-400 transition">Entrar</button>
+            <input
+              name="email"
+              type="email"
+              placeholder="Email"
+              className="w-full rounded px-3 py-2 text-black"
+              required
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Senha"
+              className="w-full rounded px-3 py-2 text-black"
+              required
+            />
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-yellow-300 text-black rounded py-2 font-semibold hover:bg-yellow-400 transition disabled:opacity-50"
+            >
+              {isLoading ? 'Entrando...' : 'Entrar'}
+            </button>
           </form>
-          <button type="button" onClick={() => onNavigate("home")} className="mt-4 underline text-sm text-white/80">Voltar para Início</button>
+          <button
+            type="button"
+            onClick={() => onNavigate("home")}
+            className="mt-4 underline text-sm text-white/80"
+          >
+            Voltar para Início
+          </button>
         </div>
       </div>
     );
@@ -279,84 +339,133 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
         <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <div className="space-x-2">
-            <button onClick={() => setIsAuthenticated(false)} className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded">Sair</button>
-            <button onClick={() => onNavigate("home")} className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Voltar</button>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded"
+            >
+              Sair
+            </button>
+            <button
+              onClick={() => onNavigate("home")}
+              className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded"
+            >
+              Voltar
+            </button>
           </div>
         </div>
 
         {errorMsg && <p className="mb-4 text-red-300">{errorMsg}</p>}
-        {isLoading && <p className="mb-4 text-yellow-200">Carregando vídeos...</p>}
+        {isLoading && <p className="mb-4 text-yellow-200">Carregando projetos...</p>}
 
-        <section className="mb-8 p-6 bg-white/10 rounded-xl shadow-sm flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Gerenciar vídeos</h2>
-          <div className="flex items-center gap-2">
-            <button onClick={openCreateModal} className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded">Criar novo</button>
-            <button onClick={fetchVideos} className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Atualizar lista</button>
+        <section className="mb-8 p-6 bg-white/10 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h2 className="text-2xl font-semibold">Gerenciar Projetos</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={openCreateModal}
+                className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded"
+              >
+                Criar novo
+              </button>
+              <button
+                onClick={() => fetchProjects(localStorage.getItem(TOKEN_KEY)!, filter)}
+                className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded"
+              >
+                Atualizar
+              </button>
+            </div>
           </div>
         </section>
 
         <section className="p-6 bg-white/10 rounded-xl shadow-sm">
-          <h2 className="text-2xl font-semibold mb-4">Vídeos cadastrados</h2>
+          <h2 className="text-2xl font-semibold mb-4">Projetos cadastrados</h2>
           <div className="flex items-center gap-4 mb-4">
-            <label className="text-sm">Filtrar por:</label>
-            <select value={filter} onChange={(e) => setFilter(e.target.value)} className="rounded px-3 py-2 text-black">
-              <option value="Todos">Todos</option>
-              <option value="Geral">Geral</option>
-              <option value="Vídeos">Vídeos</option>
-              <option value="Flyers">Flyers</option>
-              <option value="Leds">Leds</option>
+            <label className="text-sm">Filtrar por tipo:</label>
+            <select
+              value={filter}
+              onChange={(e) => {
+                const type = e.target.value as ProjectType;
+                setFilter(type);
+                const token = localStorage.getItem(TOKEN_KEY);
+                if (token) fetchProjects(token, type);
+              }}
+              className="rounded px-3 py-2 text-black"
+            >
+              <option value="videos">Vídeos</option>
+              <option value="leds">LEDs</option>
+              <option value="flyers">Flyers</option>
             </select>
-            <button onClick={() => setFilter('Todos')} className="ml-2 text-sm underline">Limpar</button>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {videos.filter(v => filter === 'Todos' || v.category === filter).map((video) => (
+            {projects.map((project) => (
               <div
-                key={video.id}
+                key={project.id}
                 className="bg-white/10 p-4 rounded-xl border border-white/10 cursor-pointer hover:bg-white/20 transition-colors"
-                onClick={() => openVideoDetails(video)}
+                onClick={() => openProjectDetails(project)}
               >
                 <div className="flex gap-3 items-start">
-                  {video.image && (
-                    <img src={video.image} alt={video.title} className="w-20 h-12 object-cover rounded" />
+                  {project.image_url && (
+                    <img
+                      src={project.image_url}
+                      alt={project.title}
+                      className="w-20 h-12 object-cover rounded"
+                    />
                   )}
                   <div className="flex-1">
-                    <p className="font-semibold">{video.title}</p>
-                    <p className="text-sm text-gray-300">{video.category}</p>
-                    <p className="text-sm mt-1">{video.description}</p>
-                    <p className="text-xs text-yellow-200 mt-2">{video.video ? "Com vídeo" : "Somente imagem"}</p>
-                    {video.video && (
-                      <div className="mt-2">
-                        <video src={video.video} className="w-full max-h-28 object-contain rounded" muted />
-                      </div>
+                    <p className="font-semibold">{project.title}</p>
+                    <p className="text-xs text-purple-300 mb-1 uppercase">
+                      {project.type}
+                    </p>
+                    <p className="text-sm text-gray-300">{project.category}</p>
+                    <p className="text-sm mt-1 line-clamp-2">{project.description}</p>
+                    {project.video_url && (
+                      <p className="text-xs text-yellow-200 mt-2">✓ Com vídeo</p>
                     )}
                   </div>
                 </div>
               </div>
             ))}
-            {videos.length === 0 && <p className="text-gray-300">Nenhum vídeo encontrado.</p>}
+            {projects.length === 0 && (
+              <p className="text-gray-300 col-span-full">
+                Nenhum projeto encontrado.
+              </p>
+            )}
           </div>
         </section>
 
-        {/* Video Details Modal */}
+        {/* Project Details Modal */}
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
           <DialogContent className="max-w-2xl p-6">
-            {selectedVideo && (
+            {selectedProject && (
               <>
                 <DialogHeader>
-                  <DialogTitle>{selectedVideo.title}</DialogTitle>
+                  <DialogTitle>{selectedProject.title}</DialogTitle>
                 </DialogHeader>
 
                 <div className="mt-4 space-y-4">
                   <div className="flex gap-4 items-start">
-                    {selectedVideo.image && (
-                      <img src={selectedVideo.image} alt={selectedVideo.title} className="w-32 h-24 object-cover rounded" />
+                    {selectedProject.image_url && (
+                      <img
+                        src={selectedProject.image_url}
+                        alt={selectedProject.title}
+                        className="w-32 h-24 object-cover rounded"
+                      />
                     )}
                     <div className="flex-1">
-                      <p className="text-sm text-gray-300 mb-1">Categoria: {selectedVideo.category}</p>
-                      <p className="text-sm">{selectedVideo.description}</p>
-                      {selectedVideo.video && (
+                      <p className="text-xs text-purple-300 mb-2 uppercase font-semibold">
+                        {selectedProject.type}
+                      </p>
+                      <p className="text-sm text-gray-300 mb-1">
+                        Categoria: {selectedProject.category}
+                      </p>
+                      <p className="text-sm">{selectedProject.description}</p>
+                      {selectedProject.video_url && (
                         <div className="mt-4">
-                          <video src={selectedVideo.video} controls className="w-full max-h-48 object-contain rounded" />
+                          <video
+                            src={selectedProject.video_url}
+                            controls
+                            className="w-full max-h-48 object-contain rounded"
+                          />
                         </div>
                       )}
                     </div>
@@ -367,7 +476,7 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
-                        handleEdit(selectedVideo);
+                        handleEdit(selectedProject);
                         setIsDetailsModalOpen(false);
                       }}
                       className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded"
@@ -383,7 +492,9 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
                       Excluir
                     </button>
                     <DialogClose>
-                      <button className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded">Fechar</button>
+                      <button className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded">
+                        Fechar
+                      </button>
                     </DialogClose>
                   </div>
                 </DialogFooter>
@@ -398,11 +509,24 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
             <DialogHeader>
               <DialogTitle>Confirmar exclusão</DialogTitle>
             </DialogHeader>
-            <p className="mt-2 text-sm">Deseja realmente excluir "{selectedVideo?.title}"? Esta ação não pode ser desfeita.</p>
+            <p className="mt-2 text-sm">
+              Deseja realmente excluir "{selectedProject?.title}"? Esta ação não pode
+              ser desfeita.
+            </p>
             <DialogFooter>
               <div className="flex gap-2">
-                <button onClick={() => setIsDeleteDialogOpen(false)} className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded">Cancelar</button>
-                <button onClick={confirmDelete} className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded">Excluir</button>
+                <button
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded"
+                >
+                  Excluir
+                </button>
               </div>
             </DialogFooter>
           </DialogContent>
@@ -412,54 +536,142 @@ export function AdminPage({ onNavigate }: AdminPageProps) {
         <Dialog open={isCreateEditModalOpen} onOpenChange={setIsCreateEditModalOpen}>
           <DialogContent className="max-w-2xl p-6">
             <DialogHeader>
-              <DialogTitle>{editingId ? 'Editar vídeo' : 'Criar vídeo'}</DialogTitle>
+              <DialogTitle>
+                {editingId ? 'Editar projeto' : 'Criar novo projeto'}
+              </DialogTitle>
             </DialogHeader>
 
             <form onSubmit={handleCreateOrUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <input value={formData.title} onChange={(e) => setFormData((s) => ({ ...s, title: e.target.value }))} placeholder="Título" className="rounded px-3 py-2 text-black" required />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-white mb-1">
+                  Tipo de Projeto
+                </label>
+                <select
+                  value={projectType}
+                  onChange={(e) => setProjectType(e.target.value as ProjectType)}
+                  disabled={!!editingId}
+                  className="rounded px-3 py-2 text-black w-full disabled:opacity-50"
+                >
+                  <option value="videos">Vídeos</option>
+                  <option value="leds">LEDs</option>
+                  <option value="flyers">Flyers</option>
+                </select>
+              </div>
+
+              <input
+                value={formData.title || ''}
+                onChange={(e) => setFormData((s) => ({ ...s, title: e.target.value }))}
+                placeholder="Título"
+                className="rounded px-3 py-2 text-black"
+                required
+              />
               <label className="sr-only">Categoria</label>
-              <select value={formData.category || ''} onChange={(e) => setFormData((s) => ({ ...s, category: e.target.value }))} className="rounded px-3 py-2 text-black" required>
+              <select
+                value={formData.category || ''}
+                onChange={(e) => setFormData((s) => ({ ...s, category: e.target.value }))}
+                className="rounded px-3 py-2 text-black"
+                required
+              >
                 <option value="">Selecione a categoria</option>
                 {CANONICAL_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">Imagem (URL ou arquivo)</label>
-                <input value={formData.image || ''} onChange={(e) => setFormData((s) => ({ ...s, image: e.target.value }))} placeholder="URL da imagem" className="rounded px-3 py-2 text-black w-full mb-2" />
-                <input type="file" accept="image/*" onChange={async (e) => {
-                  const f = e.currentTarget.files?.[0];
-                  if (!f) return;
-                  const preview = URL.createObjectURL(f);
-                  setFormData((s) => ({ ...s, image: preview }));
-                  const uploaded = await uploadFile(f);
-                  if (uploaded) setFormData((s) => ({ ...s, image: uploaded }));
-                }} className="text-sm" />
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-white mb-1">
+                  Imagem (arquivo)
+                </label>
+                <div className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    {formData.image_url && (
+                      <img
+                        src={formData.image_url}
+                        alt="preview"
+                        className="w-20 h-20 object-cover rounded mb-2"
+                      />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const f = e.currentTarget.files?.[0];
+                        if (!f) return;
+                        const preview = URL.createObjectURL(f);
+                        setFormData((s) => ({ ...s, image_url: preview }));
+                        const uploaded = await uploadFile(f, projectType);
+                        if (uploaded)
+                          setFormData((s) => ({ ...s, image_url: uploaded }));
+                      }}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">Vídeo (URL ou arquivo)</label>
-                <input value={formData.video || ''} onChange={(e) => setFormData((s) => ({ ...s, video: e.target.value }))} placeholder="URL do vídeo (opcional)" className="rounded px-3 py-2 text-black w-full mb-2" />
-                <input type="file" accept="video/*" onChange={async (e) => {
-                  const f = e.currentTarget.files?.[0];
-                  if (!f) return;
-                  const preview = URL.createObjectURL(f);
-                  setFormData((s) => ({ ...s, video: preview }));
-                  const uploaded = await uploadFile(f);
-                  if (uploaded) setFormData((s) => ({ ...s, video: uploaded }));
-                }} className="text-sm" />
-                {isUploading && <p className="text-sm text-yellow-200">Enviando arquivo...</p>}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-white mb-1">
+                  Vídeo (arquivo - opcional)
+                </label>
+                {formData.video_url && (
+                  <video
+                    src={formData.video_url}
+                    className="w-full max-h-32 object-contain rounded mb-2"
+                    muted
+                  />
+                )}
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={async (e) => {
+                    const f = e.currentTarget.files?.[0];
+                    if (!f) return;
+                    const preview = URL.createObjectURL(f);
+                    setFormData((s) => ({ ...s, video_url: preview }));
+                    setIsUploading(true);
+                    const uploaded = await uploadFile(f, projectType);
+                    setIsUploading(false);
+                    if (uploaded)
+                      setFormData((s) => ({ ...s, video_url: uploaded }));
+                  }}
+                  className="text-sm"
+                />
+                {isUploading && (
+                  <p className="text-sm text-yellow-200 mt-2">Enviando arquivo...</p>
+                )}
               </div>
 
-              <textarea value={formData.description} onChange={(e) => setFormData((s) => ({ ...s, description: e.target.value }))} placeholder="Descrição" className="md:col-span-2 rounded px-3 py-2 text-black" required />
+              <textarea
+                value={formData.description || ''}
+                onChange={(e) => setFormData((s) => ({ ...s, description: e.target.value }))}
+                placeholder="Descrição"
+                className="md:col-span-2 rounded px-3 py-2 text-black"
+                required
+              />
               <div className="md:col-span-2 flex items-center gap-2 justify-end">
-                <button type="submit" className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded">{editingId ? "Salvar edição" : "Criar novo"}</button>
-                <button type="button" onClick={() => { resetForm(); setIsCreateEditModalOpen(false); }} className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded">Cancelar</button>
+                <button
+                  type="submit"
+                  className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={isUploading}
+                >
+                  {editingId ? 'Salvar edição' : 'Criar novo'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setIsCreateEditModalOpen(false);
+                  }}
+                  className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded"
+                >
+                  Cancelar
+                </button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
-
       </div>
     </div>
   );
