@@ -1,19 +1,40 @@
+import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
+dotenv.config();
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase configuration');
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error('SUPABASE_URL is not defined');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseAnonKey) {
+  throw new Error('SUPABASE_ANON_KEY is not defined');
+}
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_KEY is not defined');
+}
+
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey
+);
+
+export const supabaseAdmin = createClient(
+  supabaseUrl,
+  supabaseServiceKey
+);
 
 export async function getUserFromToken(token: string) {
   const { data, error } = await supabase.auth.getUser(token);
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
+
   return data.user;
 }
