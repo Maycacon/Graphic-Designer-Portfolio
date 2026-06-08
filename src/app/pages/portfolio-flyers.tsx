@@ -1,11 +1,10 @@
 import { motion } from "motion/react";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
-import { AnimatedShapes } from "@/app/components/animated-shapes";
-import { ArrowLeft, FileVideo } from "lucide-react";
-import { useState } from "react";
+import { FileVideo } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/app/components/ui/dialog";
 
-import { useAdminProjects } from "@/app/lib/useAdminProjects";
+import { useSupabaseProjects, Project } from "@/lib/useSupabaseProjects";
 import { flyerProjects as fallbackFlyers } from "@/app/lib/fallback-projects";
 
 interface PortfolioFlyersProps {
@@ -13,16 +12,31 @@ interface PortfolioFlyersProps {
 }
 
 export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps) {
-  const { projects } = useAdminProjects();
+  const { fetchProjects } = useSupabaseProjects();
+  const [dbProjects, setDbProjects] = useState<Project[] | null>(null);
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
-  const displayed = projects ? projects.filter((p: any) => p.category === 'Flyers') : fallbackFlyers.map((p: any) => ({ ...p, category: 'Flyers' }));
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await fetchProjects("flyers");
+        setDbProjects(data);
+      } catch (e) {
+        setDbProjects([]);
+      }
+    };
+    load();
+  }, []);
+
+  const displayed = dbProjects && dbProjects.length > 0 
+    ? dbProjects 
+    : fallbackFlyers.map((p: any) => ({ ...p, type: 'flyers' }));
+  
   return (
     <div className="min-h-screen pt-20" style={{ backgroundColor: '#2d085e' }}>
       {/* Hero */}
       <section className="relative py-24 px-6 overflow-hidden">
-        
         <div className="relative z-10 max-w-6xl mx-auto">
-          
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -62,19 +76,18 @@ export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps) {
                     if(video) video.pause();
                   }}
                   onClick={() => {
-                    if(project.video) setSelectedProject(project);
+                    if(project.video_url || project.video) setSelectedProject(project);
                   }}
                 >
-                  {project.video ? (
+                  {(project.video_url || project.video) ? (
                     <>
                       <video
-                        src={project.video}
+                        src={project.video_url || project.video}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         muted
                         loop
                         preload="metadata"
                       />
-                      {/* Play Button Overlay */}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-all duration-300 pointer-events-none">
                         <div className="w-16 h-16 rounded-full bg-white/80 flex items-center justify-center group-hover:bg-white/90 group-hover:scale-110 transition-all duration-300 shadow-lg">
                           <FileVideo className="w-8 h-8 text-black ml-1" />
@@ -83,7 +96,7 @@ export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps) {
                     </>
                   ) : (
                     <ImageWithFallback
-                      src={project.image}
+                      src={project.image_url || project.image}
                       alt={project.title}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -114,13 +127,9 @@ export function PortfolioFlyers({ onNavigate }: PortfolioFlyersProps) {
         <DialogContent className="max-w-4xl w-[95vw] p-6 border-0 rounded-xl" style={{ backgroundColor: '#2d085e' }}>
           {selectedProject && (
             <div className="relative w-full">
-              {/* Vídeo */}
-              <div 
-                className="rounded-lg overflow-hidden border-2"
-                style={{ borderColor: '#fde68a', backgroundColor: '#000' }}
-              >
+              <div className="rounded-lg overflow-hidden border-2" style={{ borderColor: '#fde68a', backgroundColor: '#000' }}>
                 <video 
-                  src={selectedProject.video as string} 
+                  src={(selectedProject.video_url || selectedProject.video) as string} 
                   controls 
                   autoPlay 
                   className="w-full h-auto max-h-[65vh] object-contain"

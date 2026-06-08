@@ -22,7 +22,10 @@ export function useSupabaseStorage() {
 
       const { error: uploadError } = await supabase.storage
         .from(STORAGE_BUCKET)
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true // <--- Isso resolve o erro 409 forçando a substituição em caso de conflito
+        });
 
       if (uploadError) throw uploadError;
 
