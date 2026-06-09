@@ -1,7 +1,6 @@
 import { motion } from "motion/react";
 import { FileVideo } from "lucide-react";
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
-
 interface ProjectCardProps {
   project: any;
   index: number;
@@ -50,8 +49,8 @@ export function ProjectCard({
               preload="metadata"
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-all duration-300 pointer-events-none">
-              <div className="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center group-hover:bg-white/90 group-hover:scale-110 transition-all duration-300 shadow-lg">
-                <FileVideo className="w-6 h-6 text-black ml-0.5" />
+              <div className="w-12 h-12  flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg rounded-full bg-white/20 backdrop-blur-sm">
+                <img src="https://gyvlbupockscbeoxqsml.supabase.co/storage/v1/object/public/portfolio-media/images/incovideo.png" alt="Play Video" className="w-full h-full object-contain" />
               </div>
             </div>
           </>
